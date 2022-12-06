@@ -507,7 +507,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sshmutiplexer-rust"
+name = "sshmultiplexer-rust"
 version = "0.1.1"
 dependencies = [
  "anyhow",
