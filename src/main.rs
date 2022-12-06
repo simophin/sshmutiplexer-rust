@@ -1,16 +1,16 @@
+use anyhow::{bail, Context};
+use clap::{ArgGroup, Parser};
 use std::net::SocketAddr;
-use anyhow::bail;
-use clap::{Parser, ArgGroup};
+use tokio::{
+    net::{TcpListener, TcpSocket, TcpStream},
+    spawn,
+};
 
 mod endpoint;
 mod identifier;
 mod ssh;
 mod strings;
 mod tls;
-
-const fn default_listen_addr() -> SocketAddr {
-    SocketAddr::new()
-}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
@@ -25,13 +25,35 @@ struct Args {
     tls: Option<endpoint::Endpoint>,
 
     /// The port to listen to
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "127.0.0.1:443")]
     listen: SocketAddr,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
+    env_logger::init();
 
-    todo!()
+    let Args { ssh, tls, listen } = Args::parse();
+
+    let server = TcpListener::bind(&listen)
+        .await
+        .with_context(|| format!("Listening on {listen}"))?;
+
+    log::info!("Server started on {listen}");
+
+    loop {
+        let (client, client_addr) = server.accept().await?;
+        log::debug!("Received connection from {client_addr}");
+        serve_client(client, ssh.clone(), tls.clone());
+    }
+}
+
+fn serve_client(
+    mut client: TcpStream,
+    ssh: Option<endpoint::Endpoint>,
+    tls: Option<endpoint::Endpoint>,
+) {
+    spawn(async move {
+        
+    });
 }

@@ -1,11 +1,12 @@
+use anyhow::{bail, Context};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use anyhow::{bail, Context};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Endpoint {
-    pub addr: String,
-    pub port: u16
+    pub addr: Arc<str>,
+    pub port: u16,
 }
 
 impl FromStr for Endpoint {
@@ -14,12 +15,12 @@ impl FromStr for Endpoint {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut splits = s.split(':');
         match (splits.next(), splits.next(), splits.next()) {
-            (Some(addr), Some(port), None) if !addr.trim().is_empty() => {
-                Ok(Endpoint {
-                    addr: addr.trim().to_string(),
-                    port: port.parse().with_context(|| format!("Parsing \"{port}\" as a number"))?,
-                })
-            }
+            (Some(addr), Some(port), None) if !addr.trim().is_empty() => Ok(Endpoint {
+                addr: addr.trim().into(),
+                port: port
+                    .parse()
+                    .with_context(|| format!("Parsing \"{port}\" as a number"))?,
+            }),
             _ => bail!("Invalid endpoint: '{s}'. Must be in the format of addr:port"),
         }
     }
@@ -38,7 +39,13 @@ mod tests {
     #[test]
     fn endpoint_works() {
         let endpoint: Endpoint = "hello:23".parse().unwrap();
-        assert_eq!(endpoint, Endpoint { addr: String::from("hello"), port: 23 });
+        assert_eq!(
+            endpoint,
+            Endpoint {
+                addr: String::from("hello").into(),
+                port: 23
+            }
+        );
 
         assert!(matches!(Endpoint::from_str(":123"), Result::Err(_)))
     }
