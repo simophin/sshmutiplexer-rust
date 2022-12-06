@@ -28,11 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event == 'release'
     needs: test
-    matrix:
-      target:
-        - x86_64-unknown-linux-musl
-        - aarch64-unknown-linux-musl
-        - mipsel-unknown-linux-musl
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - mipsel-unknown-linux-musl
     steps:
     - uses: actions/checkout@v3
     - name: Install cross
