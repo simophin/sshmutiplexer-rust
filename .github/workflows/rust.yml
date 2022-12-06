@@ -40,7 +40,7 @@ jobs:
         run: cargo install cross
       - name: Build
         run: |
-          cross build --release && \
+          cross build --target=${{ matrix.target }} --release && \
             mv -v target/${{ matrix.target }}/release/sshmultiplexer-rust \
               sshmultiplexer-rust.${{ matrix.target }}
       - uses: actions/upload-artifact@v3
