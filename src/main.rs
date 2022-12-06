@@ -1,9 +1,15 @@
 use anyhow::{bail, Context};
 use clap::{ArgGroup, Parser};
+use endpoint::Endpoint;
+use identifier::{IdentifyResult, TrafficIdentifier};
+use smallvec::SmallVec;
+use ssh::SSHIdentifier;
 use std::net::SocketAddr;
+use tls::TLSIdentifier;
 use tokio::{
-    net::{TcpListener, TcpSocket, TcpStream},
-    spawn,
+    io::{copy_bidirectional, AsyncReadExt, AsyncWriteExt},
+    net::{TcpListener, TcpStream},
+    select, signal, spawn,
 };
 
 mod endpoint;
@@ -42,18 +48,84 @@ async fn main() -> anyhow::Result<()> {
     log::info!("Server started on {listen}");
 
     loop {
-        let (client, client_addr) = server.accept().await?;
-        log::debug!("Received connection from {client_addr}");
-        serve_client(client, ssh.clone(), tls.clone());
+        select! {
+            _ = signal::ctrl_c() => {
+                break;
+            }
+
+            r = server.accept() => {
+                let (client, client_addr) = r?;
+                log::debug!("Received connection from {client_addr}");
+                serve_client(client_addr, client, ssh.clone(), tls.clone());
+            }
+        }
     }
+
+    Ok(())
 }
 
 fn serve_client(
+    client_addr: SocketAddr,
     mut client: TcpStream,
-    ssh: Option<endpoint::Endpoint>,
-    tls: Option<endpoint::Endpoint>,
+    ssh: Option<Endpoint>,
+    tls: Option<Endpoint>,
 ) {
+    let mut identitiers: SmallVec<
+        [(
+            Box<dyn TrafficIdentifier + Send + Sync>,
+            Endpoint,
+            &'static str,
+        ); 2],
+    > = Default::default();
+
+    if let Some(ssh) = ssh {
+        identitiers.push((Box::new(SSHIdentifier), ssh, "ssh"));
+    }
+
+    if let Some(tls) = tls {
+        identitiers.push((Box::new(TLSIdentifier), tls, "tls"));
+    }
+
     spawn(async move {
-        
+        let mut buf = vec![0u8; 4096];
+        let mut bytes_read = 0usize;
+        while bytes_read < buf.len() {
+            let len = client
+                .read(&mut buf[bytes_read..])
+                .await
+                .context("Reading from {client_addr}")?;
+
+            if len == 0 {
+                bail!("Invalid read len");
+            }
+
+            bytes_read += len;
+
+            let buf = &buf[..bytes_read];
+            for (id, endpoint, name) in &identitiers {
+                if id.identify(&buf) == IdentifyResult::Positive {
+                    log::info!("Redirect {client_addr} to {name}://{endpoint}");
+                    return redirect_tcp(client, endpoint, buf).await.with_context(|| {
+                        format!(
+                            "Error redirecting traffic from {client_addr} to {name}://{endpoint}"
+                        )
+                    });
+                }
+            }
+        }
+
+        log::warn!("Connection from {client_addr} is not recoganisable");
+        anyhow::Ok(())
     });
+}
+
+async fn redirect_tcp(
+    mut client: TcpStream,
+    endpoint: &Endpoint,
+    buf: &[u8],
+) -> anyhow::Result<()> {
+    let mut upstream = TcpStream::connect((endpoint.addr.as_ref(), endpoint.port)).await?;
+    upstream.write_all(buf).await?;
+    copy_bidirectional(&mut client, &mut upstream).await?;
+    Ok(())
 }
