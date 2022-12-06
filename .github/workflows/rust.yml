@@ -36,6 +36,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ matrix.target }}
       - name: Install cross
         run: cargo install cross
       - name: Build
