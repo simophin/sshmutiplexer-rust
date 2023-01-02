@@ -114,7 +114,7 @@ fn serve_client(
             }
         }
 
-        log::warn!("Connection from {client_addr} is not recoganisable");
+        log::warn!("Connection from {client_addr} is not recognizable");
         anyhow::Ok(())
     });
 }
@@ -125,6 +125,7 @@ async fn redirect_tcp(
     buf: &[u8],
 ) -> anyhow::Result<()> {
     let mut upstream = TcpStream::connect((endpoint.addr.as_ref(), endpoint.port)).await?;
+    upstream.set_nodelay(true)?;
     upstream.write_all(buf).await?;
     copy_bidirectional(&mut client, &mut upstream).await?;
     Ok(())
