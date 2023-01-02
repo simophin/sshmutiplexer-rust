@@ -1,4 +1,4 @@
-# Demultiplex SSH & HTTPS
+# De-multiplex SSH & HTTPS
 
 This project is inspired by [sshl](https://github.com/yrutschle/sslh), but instead
 of writing in C, it's written in Rust and has very minimal functionality.
@@ -13,10 +13,10 @@ HTTPS and SSH on the port 443.
 * HTTPS
 
 ### Installation
-Download the approriate binary and run directly:
+Download the appropriate binary and run directly:
 
 ```bash
-# sshmultiplexer-rust --tls=192.168.1.2:443 --ssh=192.168.1.2:22 --listen=0.0.0.0:443
+# ssl-demux --tls=192.168.1.2:443 --ssh=192.168.1.2:22 --listen=0.0.0.0:443
 ```
 
 This command will listen on port 443 and redirect the traffic to `192.168.1.2:443`
