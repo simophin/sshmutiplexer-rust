@@ -1,9 +1,14 @@
-# Multiplex SSH & HTTPs
+# Demultiplex SSH & HTTPS
 
 This project is inspired by [sshl](https://github.com/yrutschle/sslh), but instead
-of writing in C, I decided to write a simpler version of it using Rust. 
+of writing in C, it's written in Rust and has very minimal functionality.
 
-### What protocol can be multiplexed?
+### Why is this needed?
+Some public networks cut off the access to port 22 or worse, only allow some specified
+ports to be accessed, like 80, 440. This app allows you to have your server serve both
+HTTPS and SSH on the port 443.
+
+### What protocol can be demultiplexed?
 * SSH
 * HTTPS
 
@@ -15,5 +20,5 @@ Download the approriate binary and run directly:
 ```
 
 This command will listen on port 443 and redirect the traffic to `192.168.1.2:443`
-if the traffic looks like a TLS traffic, redirect to `192.168.1.2:22` if ssh is detected.
+if the traffic looks like an HTTPS traffic, redirect to `192.168.1.2:22` if ssh is detected.
 Otherwise the traffic will be dropped.
