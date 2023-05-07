@@ -17,6 +17,10 @@ impl FromStr for Endpoint {
             .rsplit_once(':')
             .context("Failed parsing endpoint. Must be in the format of addr:port")?;
 
+        if addr.trim().is_empty() {
+            return Err(anyhow::anyhow!("Endpoint address cannot be empty"));
+        }
+
         Ok(Endpoint {
             addr: addr.trim().into(),
             port: port
