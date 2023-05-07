@@ -1,14 +1,10 @@
-use tls_parser::Err::Incomplete;
+use crate::identifier::IdentifyResult;
 use tls_parser::parse_tls_plaintext;
-use crate::identifier::{IdentifyResult, TrafficIdentifier};
+use tls_parser::Err::Incomplete;
 
-pub struct TLSIdentifier;
-
-impl TrafficIdentifier for TLSIdentifier {
-    fn identify(&self, data: &[u8]) -> IdentifyResult {
-        match parse_tls_plaintext(data) {
-            Ok(_) | Err(Incomplete(_)) => IdentifyResult::Positive,
-            _ => IdentifyResult::Negative,
-        }
+pub fn identify(data: &[u8]) -> IdentifyResult {
+    match parse_tls_plaintext(data) {
+        Ok(_) | Err(Incomplete(_)) => IdentifyResult::Positive,
+        _ => IdentifyResult::Negative,
     }
 }
